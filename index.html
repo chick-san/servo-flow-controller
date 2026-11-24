@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Servo Flow Controller｜Arduinoコード生成</title>
+<style>
+:root{--bg:#f3f6fa;--panel:#fff;--ink:#172033;--muted:#64748b;--line:#dbe3ee;--accent:#1769aa;--accent2:#0d4f83;--soft:#eaf3fb;--good:#16834a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",sans-serif;line-height:1.55}
+header{background:linear-gradient(120deg,#123b5d,#1769aa);color:#fff;padding:28px max(20px,calc((100% - 1120px)/2))}
+header h1{margin:0;font-size:clamp(23px,4vw,32px)}header p{margin:8px 0 0;color:#dcecf8}
+main{max-width:1120px;margin:24px auto;padding:0 18px 50px;display:grid;grid-template-columns:minmax(300px,420px) minmax(0,1fr);gap:20px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;box-shadow:0 3px 14px #1d35570a}
+h2{font-size:18px;margin:0 0 16px}h3{font-size:15px;margin:18px 0 8px}
+.field{margin:0 0 14px}.field label{display:block;font-weight:650;font-size:14px;margin-bottom:5px}
+input,select{width:100%;padding:10px 11px;border:1px solid #bdc9d8;border-radius:8px;background:#fff;color:var(--ink);font:inherit}
+input:focus,select:focus{outline:2px solid #9ac9ef;border-color:var(--accent)}
+.hint{font-size:12px;color:var(--muted);margin-top:4px}.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}th{color:var(--muted);font-weight:600}td input{padding:7px 8px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+button{border:0;border-radius:8px;padding:10px 14px;font:inherit;font-weight:650;cursor:pointer;background:var(--accent);color:white}
+button:hover{background:var(--accent2)}button.secondary{background:#e8eef5;color:#20344c}button.secondary:hover{background:#d8e3ef}
+pre{margin:0;background:#101a2a;color:#d9e7f5;padding:18px;border-radius:10px;overflow:auto;max-height:68vh;font:12.5px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre}
+.status{font-size:13px;color:var(--good);min-height:20px}.note{background:var(--soft);border-left:4px solid var(--accent);padding:12px 14px;border-radius:6px;font-size:13px;color:#24435f;margin-top:16px}
+.footer{max-width:1120px;margin:-28px auto 30px;padding:0 18px;color:var(--muted);font-size:12px}
+@media(max-width:820px){main{grid-template-columns:1fr}.two{gap:8px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Servo Flow Controller</h1>
+  <p>サーボ角度・動作条件を設定して、Arduino用スケッチ（.ino）を生成します。</p>
+</header>
+<main>
+<section class="panel">
+  <h2>制御条件を設定</h2>
+  <div class="two">
+    <div class="field"><label for="pin">サーボ接続ピン</label><select id="pin"><option>3</option><option>5</option><option>6</option><option selected>8</option><option>9</option><option>10</option><option>11</option></select><div class="hint">Arduino UNO / Nano のデジタルピン</div></div>
+    <div class="field"><label for="mode">操作方式</label><select id="mode"><option value="serial" selected>シリアルモニタから角度指定</option><option value="steps">プリセット段階切替</option></select></div>
+  </div>
+  <h3>開閉位置・初期位置</h3>
+  <div class="two">
+    <div class="field"><label for="openAngle">全開角度（°）</label><input id="openAngle" type="number" min="0" max="180" value="0"></div>
+    <div class="field"><label for="closeAngle">全閉角度（°）</label><input id="closeAngle" type="number" min="0" max="180" value="90"></div>
+  </div>
+  <div class="two">
+    <div class="field"><label for="startAngle">起動時の角度（°）</label><input id="startAngle" type="number" min="0" max="180" value="90"></div>
+    <div class="field"><label for="baud">シリアル通信速度</label><select id="baud"><option>9600</option><option selected>115200</option></select></div>
+  </div>
+  <h3>動作設定</h3>
+  <div class="two">
+    <div class="field"><label for="moveTime">角度変更にかける時間（ms）</label><input id="moveTime" type="number" min="0" max="10000" value="500"></div>
+    <div class="field"><label for="stepDelay">段階切替の待ち時間（ms）</label><input id="stepDelay" type="number" min="0" max="10000" value="1000"></div>
+  </div>
+  <div id="presetArea">
+    <h3>プリセット角度（段階切替モード用）</h3>
+    <table><thead><tr><th>設定</th><th>表示名</th><th>角度（°）</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td>全開</td><td><input class="preset" type="number" min="0" max="180" value="0"></td></tr>
+      <tr><td>2</td><td>大</td><td><input class="preset" type="number" min="0" max="180" value="25"></td></tr>
+      <tr><td>3</td><td>中</td><td><input class="preset" type="number" min="0" max="180" value="45"></td></tr>
+      <tr><td>4</td><td>小</td><td><input class="preset" type="number" min="0" max="180" value="65"></td></tr>
+      <tr><td>5</td><td>全閉</td><td><input class="preset" type="number" min="0" max="180" value="90"></td></tr>
+    </tbody></table>
+    <div class="hint">角度と流量の関係はチューブ・水圧・機構ごとに実測して設定してください。</div>
+  </div>
+  <div class="actions">
+    <button id="generate">コードを生成</button>
+    <button class="secondary" id="reset">初期値に戻す</button>
+  </div>
+  <div class="note"><b>注意：</b>サーボはArduinoの5V端子からではなく、十分な電流を供給できる外部電源で駆動してください。外部電源とArduinoのGNDは共通にします。サーボの可動範囲・機構のストッパーを確認してから通電してください。</div>
+</section>
+<section class="panel">
+  <h2>生成されたArduinoプログラム</h2>
+  <div class="actions">
+    <button id="copy">コードをコピー</button>
+    <button class="secondary" id="download">.inoをダウンロード</button>
+  </div>
+  <div class="status" id="status" aria-live="polite"></div>
+  <pre><code id="code"></code></pre>
+  <div class="note" id="usage"><b>使い方：</b>生成したコードをArduino IDEに貼り付け、ボードとポートを選択して書き込んでください。シリアル操作モードでは、シリアルモニタに角度（0〜180）を入力して送信します。</div>
+</section>
+</main>
+<div class="footer">Servo Flow Controller — 単一HTMLファイルで動作します。インターネット接続・追加ライブラリは不要です（Arduino側では標準の Servo ライブラリを使用）。</div>
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v,min,max) => Math.min(max,Math.max(min,Number(v)));
+function validate(){
+  const fields=['openAngle','closeAngle','startAngle','moveTime','stepDelay'];
+  for(const id of fields){const el=$(id),min=Number(el.min),max=Number(el.max),v=Number(el.value);if(el.value===''||!Number.isFinite(v)||v<min||v>max){el.focus();throw new Error(el.previousElementSibling.textContent+'は'+min+'〜'+max+'の範囲で入力してください。');}}
+  document.querySelectorAll('.preset').forEach(el=>{let v=Number(el.value);if(el.value===''||!Number.isFinite(v)||v<0||v>180)throw new Error('プリセット角度は0〜180で入力してください。');});
+}
+function makeCode(){
+  validate();
+  const pin=$('pin').value, mode=$('mode').value, open=clamp($('openAngle').value,0,180), close=clamp($('closeAngle').value,0,180), start=clamp($('startAngle').value,0,180), move=Number($('moveTime').value), baud=$('baud').value;
+  const presets=[...document.querySelectorAll('.preset')].map(e=>clamp(e.value,0,180));
+  const common=`#include <Servo.h>
+
+Servo flowServo;
+
+const int SERVO_PIN = ${pin};
+const int OPEN_ANGLE = ${open};
+const int CLOSE_ANGLE = ${close};
+const int START_ANGLE = ${start};
+const unsigned long MOVE_TIME_MS = ${move};
+
+int currentAngle = START_ANGLE;
+
+// 指定角度まで滑らかに移動する
+void moveServoTo(int targetAngle) {
+  targetAngle = constrain(targetAngle, 0, 180);
+  int startAngle = currentAngle;
+  if (MOVE_TIME_MS == 0 || startAngle == targetAngle) {
+    flowServo.write(targetAngle);
+    currentAngle = targetAngle;
+    return;
+  }
+  int steps = abs(targetAngle - startAngle);
+  unsigned long interval = max(1UL, MOVE_TIME_MS / (unsigned long)steps);
+  int direction = (targetAngle > startAngle) ? 1 : -1;
+  for (int angle = startAngle + direction; ; angle += direction) {
+    flowServo.write(angle);
+    delay(interval);
+    if (angle == targetAngle) break;
+  }
+  currentAngle = targetAngle;
+}
+
+void setup() {
+  Serial.begin(${baud});
+  flowServo.attach(SERVO_PIN);
+  flowServo.write(START_ANGLE);
+  currentAngle = START_ANGLE;
+  delay(500);
+  Serial.println(F("Servo Flow Controller ready."));
+`;
+  if(mode==='serial'){
+    return common+`  Serial.println(F("Enter angle 0-180 and press Send."));
+  Serial.println(F("Commands: O=open, C=close"));
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    String command = Serial.readStringUntil('\\n');
+    command.trim();
+    if (command.equalsIgnoreCase("O")) {
+      moveServoTo(OPEN_ANGLE);
+      Serial.println(F("OPEN"));
+    } else if (command.equalsIgnoreCase("C")) {
+      moveServoTo(CLOSE_ANGLE);
+      Serial.println(F("CLOSED"));
+    } else {
+      int angle = command.toInt();
+      if (command.length() > 0 && (angle >= 0 && angle <= 180)) {
+        moveServoTo(angle);
+        Serial.print(F("Angle: "));
+        Serial.println(currentAngle);
+      } else {
+        Serial.println(F("Invalid input. Enter 0-180, O, or C."));
+      }
+    }
+  }
+}
+`;
+  }
+  return common+`  Serial.println(F("Preset mode: send 1-5 to select a position."));
+}
+
+void loop() {
+  if (Serial.available() > 0) {
+    char command = Serial.read();
+    int targetAngle = -1;
+    switch (command) {
+      case '1': targetAngle = ${presets[0]}; break; // 全開
+      case '2': targetAngle = ${presets[1]}; break; // 大
+      case '3': targetAngle = ${presets[2]}; break; // 中
+      case '4': targetAngle = ${presets[3]}; break; // 小
+      case '5': targetAngle = ${presets[4]}; break; // 全閉
+    }
+    if (targetAngle >= 0) {
+      moveServoTo(targetAngle);
+      Serial.print(F("Selected angle: "));
+      Serial.println(currentAngle);
+    } else if (command != '\\n' && command != '\\r') {
+      Serial.println(F("Enter 1, 2, 3, 4, or 5."));
+    }
+  }
+}
+`;
+}
+function update(){try{$('code').textContent=makeCode();$('status').textContent='設定を反映しました。';$('usage').innerHTML=$('mode').value==='serial'?'<b>使い方：</b>Arduino IDEで書き込んだ後、シリアルモニタを115200 baud（設定値）・改行ありにします。0〜180の角度、または O（全開）/ C（全閉）を送信してください。':'<b>使い方：</b>Arduino IDEで書き込んだ後、シリアルモニタを設定した通信速度にします。1〜5を送信すると各プリセット角度へ移動します。';}catch(e){$('status').textContent=e.message;}}
+$('generate').addEventListener('click',update);
+$('mode').addEventListener('change',()=>{$('presetArea').style.opacity=$('mode').value==='steps'?'1':'.55';update();});
+$('copy').addEventListener('click',async()=>{try{await navigator.clipboard.writeText($('code').textContent);$('status').textContent='コードをコピーしました。';}catch(e){$('status').textContent='コピーできません。コード欄を選択してコピーしてください。';}});
+$('download').addEventListener('click',()=>{const blob=new Blob([$('code').textContent],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ServoFlowController.ino';a.click();URL.revokeObjectURL(a.href);$('status').textContent='.inoファイルをダウンロードしました。';});
+$('reset').addEventListener('click',()=>{ $('pin').value='8';$('mode').value='serial';$('openAngle').value=0;$('closeAngle').value=90;$('startAngle').value=90;$('baud').value='115200';$('moveTime').value=500;$('stepDelay').value=1000;[0,25,45,65,90].forEach((v,i)=>document.querySelectorAll('.preset')[i].value=v);$('presetArea').style.opacity='.55';update();});
+$('presetArea').style.opacity='.55';update();
+</script>
+</body>
+</html>
